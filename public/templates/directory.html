@@ -1,0 +1,29 @@
+{{ define "content" }}
+<div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2">
+  {{ range .Dirs }}
+  <a class="mb-4 pl-2 pr-3 py-1 border border-gray-900 rounded-md flex justify-between" href="{{ .Path }}">
+    <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z" />
+    </svg>
+    {{ .Name }}
+  </a>
+  {{ end }}
+</div>
+<div class="mt-2">
+  <form action="/search/{{ .Path }}" class="flex justify-between gap-2">
+    <input class="pl-2 py-1 w-full border border-gray-900 rounded-md" type="text" name="q"/>
+    <button class="px-2 py-1 border border-gray-900 rounded-md" type="submit">Search</button>
+  </form>
+</div>
+<div class="mt-4 divide-y divide-gray-400">
+{{ range .Files }}
+  <div class="py-2 whitespace-no-wrap text-gray-900 text-left">
+    <div class="w-max mx-auto text-center sm:w-full sm:flex sm:justify-between">
+      <a class="font-bold"
+         href="{{ .Path }}">{{ .Name }}</a>
+      <div class="text-sm">{{ .Mtime | formatTime }}</div>
+    </div>
+  </div>
+{{ end }}
+</div>
+{{ end }}

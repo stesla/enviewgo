@@ -1,0 +1,23 @@
+{
+  "name": "enview",
+  "version": "1.0.0",
+  "description": "a tool for viewing Envoy logs",
+  "scripts": {
+    "build:css": "tailwindcss build css/styles.css -o public/css/styles.css"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stesla/enview.git"
+  },
+  "author": "Samuel Tesla",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/stesla/enview/issues"
+  },
+  "homepage": "https://github.com/stesla/enview#readme",
+  "devDependencies": {
+    "autoprefixer": "^10.0.2",
+    "postcss": "^8.1.9",
+    "tailwindcss": "^2.0.1"
+  }
+}
