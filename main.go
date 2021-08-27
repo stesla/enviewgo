@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"html/template"
@@ -11,6 +12,8 @@ import (
 	"path"
 	"path/filepath"
 	"sort"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/spf13/pflag"
@@ -52,7 +55,19 @@ func main() {
 }
 
 func SearchPath(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Search Path: [%v]\n", r.URL.Path)
+	crumbs := breadcrumbs(r)
+	p := logPath(r.URL.Path)
+	query := r.FormValue("q")
+	results, err := grep(query, p, r.URL.Path)
+	if err != nil {
+		internalServerError(w, "grep", err)
+	}
+	sort.Sort(sort.Reverse(grepResultSort(results)))
+	renderView(w, r, "search", nil, map[string]interface{}{
+		"Crumbs":  crumbs,
+		"Query":   query,
+		"Results": results,
+	})
 }
 
 func ViewPath(w http.ResponseWriter, r *http.Request) {
@@ -130,6 +145,75 @@ func breadcrumbs(r *http.Request) []directory {
 	return xs
 }
 
+type grepResult struct {
+	File  string
+	URL   string
+	Name  string
+	HTML  template.HTML
+	Mtime time.Time
+}
+
+type grepResultSort []*grepResult
+
+func (a grepResultSort) Len() int           { return len(a) }
+func (a grepResultSort) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a grepResultSort) Less(i, j int) bool { return a[i].Mtime.Before(a[j].Mtime) }
+
+func grep(query, dir, p string) (grs []*grepResult, _ error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+	var wg sync.WaitGroup
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		gr := &grepResult{
+			File: filepath.Join(dir, e.Name()),
+			URL:  path.Join(p, e.Name()),
+			Name: e.Name(),
+		}
+		wg.Add(1)
+		go func() {
+			gr.grep(query)
+			wg.Done()
+		}()
+		grs = append(grs, gr)
+	}
+	wg.Wait()
+	return
+}
+
+func (gr *grepResult) HasResults() bool { return len(gr.HTML) > 0 }
+
+func (gr *grepResult) grep(query string) {
+	f, err := os.Open(gr.File)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+
+	info, err := f.Stat()
+	if err != nil {
+		return
+	}
+	gr.Mtime = info.ModTime()
+
+	var html string
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := scanner.Text()
+		plain, _ := parseText(line)
+		if strings.Contains(plain, query) {
+			html += line + "\n"
+		}
+	}
+	html, _ = parseHTML(html)
+	gr.HTML = template.HTML(html)
+}
+
 func internalServerError(w http.ResponseWriter, tag string, err error) {
 	log.Println("Internal Server Error:", tag+":", err)
 	http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -153,10 +237,10 @@ func parseLog(p string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return parseHTML(bs)
+	return parseHTML(string(bs))
 }
 
-func readDir(dir string, p string) (dirs []directory, files []file, _ error) {
+func readDir(dir, p string) (dirs []directory, files []file, _ error) {
 	dirs = []directory{}
 	files = []file{}
 	entries, err := os.ReadDir(dir)

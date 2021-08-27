@@ -10,14 +10,26 @@ import (
 
 var parseError = errors.New("parse error")
 
-func parseHTML(bs []byte) (string, error) {
-	var p parser
-	if err := p.parse(string(bs)); err != nil {
+func parseHTML(in string) (string, error) {
+	ts, err := parse(in)
+	if err != nil {
 		return "", err
 	}
-	chunks := make([]string, len(p.ts))
-	for i, t := range p.ts {
+	chunks := make([]string, len(ts))
+	for i, t := range ts {
 		chunks[i] = t.toHTML()
+	}
+	return strings.Join(chunks, ""), nil
+}
+
+func parseText(in string) (string, error) {
+	ts, err := parse(in)
+	if err != nil {
+		return "", err
+	}
+	chunks := make([]string, len(ts))
+	for i, t := range ts {
+		chunks[i] = t.text
 	}
 	return strings.Join(chunks, ""), nil
 }
