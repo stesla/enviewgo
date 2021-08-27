@@ -2,6 +2,8 @@ package main
 
 import (
 	"errors"
+	"fmt"
+	"html"
 	"strconv"
 	"strings"
 )
@@ -9,7 +11,15 @@ import (
 var parseError = errors.New("parse error")
 
 func parseHTML(bs []byte) (string, error) {
-	return string(bs), nil
+	var p parser
+	if err := p.parse(string(bs)); err != nil {
+		return "", err
+	}
+	chunks := make([]string, len(p.ts))
+	for i, t := range p.ts {
+		chunks[i] = t.toHTML()
+	}
+	return strings.Join(chunks, ""), nil
 }
 
 type text struct {
@@ -17,6 +27,26 @@ type text struct {
 	bg   string
 	fg   string
 	bold bool
+}
+
+func (t *text) toHTML() string {
+	escaped := html.EscapeString(t.text)
+	var styles []string
+	if len(t.bg) > 0 {
+		styles = append(styles, "background-color: "+t.bg)
+	}
+	if len(t.fg) > 0 {
+		styles = append(styles, "color: "+t.fg)
+	}
+	if t.bold {
+		styles = append(styles, "font-weight: bold")
+	}
+	if len(styles) > 0 {
+		style := strings.Join(styles, "; ")
+		return fmt.Sprintf("<span style=\"%v\">%v</span>", style, escaped)
+	} else {
+		return escaped
+	}
 }
 
 func parse(in string) ([]text, error) {

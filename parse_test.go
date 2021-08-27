@@ -60,3 +60,19 @@ func TestParse(t *testing.T) {
 		assert.Equal(t, test.expected, actual)
 	}
 }
+
+func TestToHTML(t *testing.T) {
+	tests := []struct {
+		input    text
+		expected string
+	}{
+		{text{text: "plain"}, "plain"},
+		{text{text: "foo", bg: "#808000", fg: "#800000", bold: true},
+			`<span style="background-color: #808000; color: #800000; font-weight: bold">foo</span>`},
+		{text{text: "<title>"}, "&lt;title&gt;"},
+	}
+	for _, test := range tests {
+		actual := test.input.toHTML()
+		assert.Equal(t, test.expected, actual)
+	}
+}

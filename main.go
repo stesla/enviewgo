@@ -82,7 +82,7 @@ func ViewPath(w http.ResponseWriter, r *http.Request) {
 		}
 		renderView(w, r, "log", nil, map[string]interface{}{
 			"Crumbs": crumbs,
-			"HTML":   html,
+			"HTML":   template.HTML(html),
 		})
 	}
 }
