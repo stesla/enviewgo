@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -75,8 +76,13 @@ func ViewPath(w http.ResponseWriter, r *http.Request) {
 			"Path":   r.URL.Path,
 		})
 	} else {
+		html, err := parseLog(p)
+		if err != nil {
+			internalServerError(w, "parseLog", err)
+		}
 		renderView(w, r, "log", nil, map[string]interface{}{
 			"Crumbs": crumbs,
+			"HTML":   html,
 		})
 	}
 }
@@ -140,6 +146,14 @@ func isDirectory(p string) (bool, error) {
 func logPath(p string) string {
 	dir := viper.GetString("enview.log.dir")
 	return filepath.Join(dir, p)
+}
+
+func parseLog(p string) (string, error) {
+	bs, err := ioutil.ReadFile(p)
+	if err != nil {
+		return "", err
+	}
+	return parseHTML(bs)
 }
 
 func readDir(dir string, p string) (dirs []directory, files []file, _ error) {
