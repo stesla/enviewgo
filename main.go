@@ -24,7 +24,11 @@ var cfgFile string
 
 func init() {
 	pflag.StringVar(&cfgFile, "config", "", "config file, default: $HOME/.enview.toml")
+	pflag.String("addr", ":8080", "address to listen on")
+	pflag.String("static", "./public", "directory to serve static files from")
 	viper.SetDefault("enview.log.dir", "./logs")
+	viper.BindPFlag("httpd.address", pflag.Lookup("addr"))
+	viper.BindPFlag("httpd.static.dir", pflag.Lookup("static"))
 	viper.SetDefault("httpd.template.dir", "./public/templates")
 }
 
@@ -51,7 +55,13 @@ func main() {
 	http.Handle("/", http.HandlerFunc(ViewPath))
 	http.Handle("/favicon.ico", http.HandlerFunc(http.NotFound))
 	http.Handle("/search/", http.StripPrefix("/search", http.HandlerFunc(SearchPath)))
-	http.ListenAndServe(":8080", nil)
+
+	static := http.StripPrefix("/static", http.FileServer(http.Dir(viper.GetString("httpd.static.dir"))))
+	http.Handle("/static/", static)
+
+	addr := viper.GetString("httpd.address")
+	log.Println("listening on", addr)
+	log.Fatalln(http.ListenAndServe(addr, nil))
 }
 
 func SearchPath(w http.ResponseWriter, r *http.Request) {
